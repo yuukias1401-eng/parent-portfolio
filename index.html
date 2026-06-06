@@ -165,8 +165,7 @@ canvas { display: block; width: 100%; }
         <thead>
           <tr>
             <th>銘柄（コード）</th>
-            <th>取得単価</th>
-            <th>現在値</th>
+            <th>取得→現在</th>
             <th>株数</th>
             <th>評価額</th>
             <th>損益（円/％）</th>
@@ -407,11 +406,13 @@ function renderTable() {
     const cls = pl !== null ? (pl >= 0 ? 'green' : 'red') : '';
     return `<tr>
       <td><b>${s.name}</b><br><span style="font-size:18px;color:#9ca3af">${s.code}</span></td>
-      <td>${fmt(s.cost)}</td>
-      <td>${p !== null ? fmt(p) : '<span style="color:#9ca3af;font-size:18px">取得できませんでした</span>'}</td>
-      <td>${s.qty}</td>
+      <td>
+        <div style="font-size:15px;color:#9ca3af;margin-bottom:2px">¥${s.cost.toLocaleString()}</div>
+        <div style="font-size:20px;font-weight:700">${p !== null ? fmt(p) : '<span style="color:#9ca3af;font-size:15px">取得できません</span>'}</div>
+      </td>
+      <td style="font-size:16px;color:#6b7280">${s.qty}</td>
       <td>${ev !== null ? fmt(ev) : '---'}</td>
-      <td class="${cls}">${pl !== null ? fmt(pl) + '<br>' + fmtPct(plPct) : '---'}</td>
+      <td class="${cls}" style="font-weight:700;font-size:22px">${pl !== null ? fmt(pl) + '<br><span style="font-size:18px">' + fmtPct(plPct) + '</span>' : '---'}</td>
     </tr>`;
   }).join('');
 
@@ -422,12 +423,12 @@ function renderTable() {
 
   document.getElementById('holdings-body').innerHTML = rows + `
     <tr class="cash-row">
-      <td>現金</td><td></td><td></td><td></td><td>${fmt(cash)}</td><td></td>
+      <td>現金</td><td></td><td></td><td>${fmt(cash)}</td><td></td>
     </tr>
     <tr class="total-row">
-      <td>合計</td><td></td><td></td><td></td>
+      <td>合計</td><td></td><td></td>
       <td>${fmt(totEv + cash)}</td>
-      <td class="${totPl >= 0 ? 'green' : 'red'}">${fmt(totPl)}<br>${fmtPct(totPct)}</td>
+      <td class="${totPl >= 0 ? 'green' : 'red'}" style="font-weight:700;font-size:22px">${fmt(totPl)}<br><span style="font-size:18px">${fmtPct(totPct)}</span></td>
     </tr>`;
 }
 
@@ -438,7 +439,7 @@ function renderDividend() {
     const total = list.reduce((sum, s) => sum + s.divPerShare * s.qty, 0);
     document.getElementById('div-' + m).innerHTML =
       `<div class="div-month-header"><span>${m}月 受取配当</span><span class="div-total">${fmt(total)}</span></div>` +
-      list.map(s => `<div class="div-item"><span>${s.name}</span><span>${fmt(s.divPerShare * s.qty)}（${s.qty}株 × ¥${s.divPerShare}）</span></div>`).join('');
+      list.map(s => `<div class="div-item"><span><b>${s.name}</b>　${fmt(s.divPerShare * s.qty)}</span><span style="font-size:14px;color:#9ca3af">（${s.qty}株 × ¥${s.divPerShare}）</span></div>`).join('');
   });
 }
 
