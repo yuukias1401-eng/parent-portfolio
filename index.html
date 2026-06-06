@@ -14,7 +14,7 @@ body {
   padding: 16px;
 }
 .container { max-width: 680px; margin: 0 auto; }
-h1 { font-size: 28px; font-weight: 700; margin-bottom: 16px; color: #111827; }
+h1 { font-size: 28px; font-weight: 700; margin-bottom: 0; color: #111827; }
 
 .card {
   background: #fff;
@@ -101,20 +101,23 @@ canvas { display: block; width: 100%; }
 .benefit-detail { font-size: 18px; color: #4b5563; line-height: 1.7; }
 
 /* Update button */
-.update-area { text-align: center; padding: 8px 0 28px; }
 .update-btn {
-  background: #22c55e; color: #fff; border: none; border-radius: 10px;
-  padding: 18px 40px; font-size: 22px; font-weight: 700; cursor: pointer;
-  font-family: inherit; transition: background 0.15s;
+  background: #22c55e; color: #fff; border: none; border-radius: 8px;
+  padding: 10px 16px; font-size: 16px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background 0.15s; white-space: nowrap; flex-shrink: 0;
 }
 .update-btn:hover { background: #16a34a; }
 .update-btn:disabled { background: #86efac; cursor: not-allowed; }
-#last-update { margin-top: 10px; font-size: 18px; color: #9ca3af; }
+#last-update { font-size: 14px; color: #9ca3af; margin-bottom: 16px; margin-top: 4px; }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>📊 株・優待 まとめ</h1>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <h1>📊 株・優待 まとめ</h1>
+    <button class="update-btn" id="update-btn" onclick="onUpdate()">🔄 更新する</button>
+  </div>
+  <div id="last-update"></div>
 
   <!-- AI comment -->
   <div class="card comment-card">
@@ -218,11 +221,6 @@ canvas { display: block; width: 100%; }
     </div>
   </div>
 
-  <!-- Update button -->
-  <div class="update-area">
-    <button class="update-btn" id="update-btn" onclick="onUpdate()">🔄 更新する</button>
-    <div id="last-update"></div>
-  </div>
 </div>
 
 <script>
