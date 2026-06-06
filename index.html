@@ -463,7 +463,10 @@ function drawPie() {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, W, H);
 
-  const data = STOCKS.map((s, i) => ({ name: s.name, color: s.color, value: evalAmt(i) }));
+  const data = [
+    ...STOCKS.map((s, i) => ({ name: s.name, color: s.color, value: evalAmt(i) })),
+    { name: '現金', color: '#d1d5db', value: getCash() }
+  ];
   const total = data.reduce((s, d) => s + d.value, 0);
   const cx = W * 0.34, cy = H / 2, r = Math.min(cx * 0.9, (H / 2) * 0.85);
 
@@ -555,6 +558,7 @@ window.onCashChange = () => {
   saveCash(getCash());
   renderStats();
   renderTable();
+  drawPie();
 };
 
 // ── Update button ─────────────────────────────
