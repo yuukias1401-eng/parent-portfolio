@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>親の株ポートフォリオ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f9fafb;
+  color: #1f2937;
+  padding: 16px;
+}
+.container { max-width: 640px; margin: 0 auto; }
+h1 { font-size: 1.2rem; font-weight: 700; margin-bottom: 16px; color: #111827; }
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+/* Claude comment */
+.comment-card { border-left: 4px solid #22c55e; background: #f0fdf4; }
+.comment-label { font-size: 0.75rem; color: #16a34a; font-weight: 700; margin-bottom: 6px; }
+#comment-text { font-size: 0.9rem; line-height: 1.7; color: #166534; white-space: pre-line; }
+
+/* Stats grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 560px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat-item { background: #f9fafb; border-radius: 8px; padding: 12px 8px; text-align: center; }
+.stat-label { font-size: 0.68rem; color: #6b7280; margin-bottom: 5px; line-height: 1.3; }
+.stat-value { font-size: 0.95rem; font-weight: 700; color: #111827; }
+.stat-sub { font-size: 0.72rem; margin-top: 2px; }
+
+/* Cash input */
+.cash-input {
+  background: transparent; border: none; border-bottom: 1px solid #d1d5db;
+  color: #111827; font-size: 0.95rem; font-weight: 700; text-align: center;
+  width: 88px; font-family: inherit; outline: none;
+}
+
+/* Chart grid */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+@media (max-width: 560px) { .chart-grid { grid-template-columns: 1fr; } }
+.chart-card {
+  background: #fff; border-radius: 12px; padding: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+canvas { display: block; width: 100%; }
+
+/* Table */
+.tbl { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.tbl th {
+  background: #f3f4f6; padding: 7px 5px; text-align: right;
+  font-weight: 600; color: #374151; font-size: 0.73rem;
+}
+.tbl th:first-child { text-align: left; }
+.tbl td { padding: 8px 5px; text-align: right; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.tbl td:first-child { text-align: left; }
+.tbl tr:last-child td { border-bottom: none; }
+.total-row td { font-weight: 700; background: #f9fafb; }
+.cash-row td { color: #6b7280; }
+.green { color: #16a34a; }
+.red   { color: #dc2626; }
+
+/* Dividend */
+.div-section { margin-bottom: 14px; }
+.div-section:last-child { margin-bottom: 0; }
+.div-month-header {
+  font-size: 0.85rem; font-weight: 700; color: #374151;
+  margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+}
+.div-total { font-size: 0.9rem; font-weight: 700; color: #16a34a; }
+.div-item {
+  display: flex; justify-content: space-between;
+  font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid #f3f4f6; color: #4b5563;
+}
+.div-item:last-child { border-bottom: none; }
+
+/* Benefit cards */
+.benefit-card { background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+.benefit-card:last-child { margin-bottom: 0; }
+.benefit-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.benefit-name { font-size: 0.88rem; font-weight: 700; }
+.benefit-badge { background: #dcfce7; color: #16a34a; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.benefit-detail { font-size: 0.78rem; color: #4b5563; line-height: 1.6; }
+
+/* Update button */
+.update-area { text-align: center; padding: 8px 0 28px; }
+.update-btn {
+  background: #22c55e; color: #fff; border: none; border-radius: 10px;
+  padding: 14px 32px; font-size: 1rem; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background 0.15s;
+}
+.update-btn:hover { background: #16a34a; }
+.update-btn:disabled { background: #86efac; cursor: not-allowed; }
+#last-update { margin-top: 8px; font-size: 0.8rem; color: #9ca3af; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 親の株ポートフォリオ</h1>
+
+  <!-- Claude comment -->
+  <div class="card comment-card">
+    <div class="comment-label">🤖 Claudeからのひとこと</div>
+    <div id="comment-text">読み込み中...</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card">
+    <div class="stat-grid">
+      <div class="stat-item">
+        <div class="stat-label">株式評価総額</div>
+        <div class="stat-value" id="stat-eval">---</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">株式損益合計</div>
+        <div class="stat-value" id="stat-pl">---</div>
+        <div class="stat-sub" id="stat-pl-pct"></div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">現金</div>
+        <div class="stat-value">¥<input type="number" id="cash-input" class="cash-input" oninput="onCashChange()"></div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">資産合計</div>
+        <div class="stat-value" id="stat-total">---</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="card-title">📈 保有比率</div>
+      <canvas id="pie-canvas"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">📉 資産推移</div>
+      <canvas id="line-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Holdings table -->
+  <div class="card">
+    <div class="card-title">📋 保有銘柄一覧</div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>銘柄（コード）</th>
+            <th>取得単価</th>
+            <th>現在値</th>
+            <th>株数</th>
+            <th>評価額</th>
+            <th>損益（円/％）</th>
+          </tr>
+        </thead>
+        <tbody id="holdings-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Dividend calendar -->
+  <div class="card">
+    <div class="card-title">💴 配当カレンダー</div>
+    <div class="div-section" id="div-3"></div>
+    <div class="div-section" id="div-9"></div>
+  </div>
+
+  <!-- Shareholder benefits -->
+  <div class="card">
+    <div class="card-title">🎁 株主優待</div>
+    <div class="benefit-card">
+      <div class="benefit-header">
+        <div class="benefit-name">🎁 森永製菓（2201）</div>
+        <span class="benefit-badge">3月</span>
+      </div>
+      <div class="benefit-detail">
+        自社製品詰め合わせ（チョコレート等）<br>
+        3月末基準・6月発送予定
+      </div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-header">
+        <div class="benefit-name">🎁 日本管財HD（9347）</div>
+        <span class="benefit-badge">3・9月</span>
+      </div>
+      <div class="benefit-detail">
+        カタログギフト2,000円相当（3年以上保有で3,000円相当）<br>
+        3月・9月末基準、年2回、6月中旬・12月初旬発送
+      </div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-header">
+        <div class="benefit-name">🎁 Jオイルミルズ（2613）</div>
+        <span class="benefit-badge">3月</span>
+      </div>
+      <div class="benefit-detail">
+        公式オンラインショップクーポンまたは自社製品<br>
+        3月末基準・6月発送予定
+      </div>
+    </div>
+  </div>
+
+  <!-- Update button -->
+  <div class="update-area">
+    <button class="update-btn" id="update-btn" onclick="onUpdate()">🔄 更新する</button>
+    <div id="last-update"></div>
+  </div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────
+const STOCKS = [
+  { code:'2201', name:'森永製菓',      qty:100, cost:2353, divPerShare:62, divMonths:[3,9],
+    color:'#4ade80',
+    facts:['チョコレート・ハイチュウ・ビスケットを作ってる会社','優待でチョコの詰め合わせが届く'] },
+  { code:'9347', name:'日本管財HD',    qty:100, cost:2714, divPerShare:44, divMonths:[3,9],
+    color:'#60a5fa',
+    facts:['ビル管理・清掃・施設管理の縁の下の力持ち','優待はカタログギフト（3年以上で3000円相当）'] },
+  { code:'2613', name:'Jオイルミルズ', qty:200, cost:1995, divPerShare:70, divMonths:[3,9],
+    color:'#fb923c',
+    facts:['味の素グループの食用油メーカー','優待は公式ショップクーポンか自社製品'] },
+];
+
+const PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
+];
+
+const BASE_HISTORY = [
+  {date:'25/6',  val:1000000, fixed:true},
+  {date:'25/8',  val:1008000, fixed:true},
+  {date:'25/10', val:1012000, fixed:true},
+  {date:'25/12', val:1010000, fixed:true},
+  {date:'26/2',  val:1009000, fixed:true},
+  {date:'26/3',  val:1012000, fixed:true},
+  {date:'26/5',  val:1025900, fixed:true},
+];
+
+const MESSAGES = {
+  good: [
+    '森永さんが今日も頑張ってます🍫 じわじわ増えてますよ！',
+    'いい感じです！ハイチュウ食べながらゆっくり眺めてください。',
+    '全体的に好調！日本管財さんのカタログ、何を頼むか考えておきましょう🎁',
+    '含み益が出てます。売らなければ負けません！',
+    '今夜はJオイルさんの油でおいしいもの作りましょう🍳',
+    'じわじわ増えるのが長期投資の醍醐味ですね。',
+    '3銘柄ともしっかり働いてくれてます。優待も楽しみに待ちましょう！',
+    '資産、着実に増えてますよ。コツコツが一番です。',
+    '好調です！チョコレートで一息つきながら眺めてください🍫',
+    '縁の下の力持ち3銘柄、今日も頑張ってます！',
+  ],
+  flat: [
+    '今日は穏やかな一日です。株も休憩中かな？',
+    '大きな動きなし。嵐の前の静けさ…かもしれません。',
+    'じっくり待ちましょう。配当・優待はちゃんとやってきます！',
+    '横ばいの日は優待の内容でも眺めて和みましょう🎁',
+    '日本管財さん、今日も施設をきれいにしてくれてます。ありがとう。',
+    '焦らなくて大丈夫。長期保有が一番の武器です。',
+    'Jオイルさんの油、今日の夕食に使いましたか？🍳',
+    '株価は休んでも配当はやってくる。それが長期投資の強みです。',
+    '静かな日こそ、チョコレートで一息つきましょう🍫',
+    '今は仕込み中かもしれません。待ちましょう！',
+  ],
+  bad: [
+    'ちょっと元気ないですが、配当・優待はちゃんと届きます！',
+    '下がった時こそ、チョコレートで一息つきましょう🍫',
+    '長期保有が武器です。焦らずいきましょう。',
+    'Jオイルさんの油でおいしいもの作って、元気出しましょう🍳',
+    '含み損は紙の上の話。売らなければ負けじゃないです！',
+    '嵐の後には晴れ間が来ます。日本管財さんを信じましょう。',
+    'こういう時は優待の内容を眺めて和むのが一番です🎁',
+    '3社とも赤字じゃないので大丈夫。じっくり待ちましょう。',
+    'カタログギフト、何を頼もうか考えながら待ちましょう。',
+    '株価の波に乗せられないのが長期投資のコツです。',
+  ],
+};
+
+// ── State ─────────────────────────────────────
+let prices = STOCKS.map(() => null);
+let history = loadHistory();
+
+// ── localStorage ──────────────────────────────
+function loadHistory() {
+  try {
+    const s = localStorage.getItem('parent_history');
+    if (s) return JSON.parse(s);
+  } catch(e) {}
+  const h = BASE_HISTORY.map(x => ({...x}));
+  localStorage.setItem('parent_history', JSON.stringify(h));
+  return h;
+}
+function saveHistory(h) { localStorage.setItem('parent_history', JSON.stringify(h)); }
+function loadCash() {
+  const v = localStorage.getItem('parent_cash');
+  return v !== null ? Number(v) : 94300;
+}
+function saveCash(v) { localStorage.setItem('parent_cash', String(v)); }
+
+// ── Price fetch ───────────────────────────────
+async function fetchPrice(code) {
+  const sym = code + '.T';
+  const cb = Date.now();
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d&_=${cb}`;
+  try {
+    return await Promise.any(
+      PROXIES.map(proxy =>
+        fetch(proxy + encodeURIComponent(url))
+          .then(r => { if (!r.ok) throw new Error('http'); return r.json(); })
+          .then(d => {
+            const p = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+            if (!p) throw new Error('no price');
+            return p;
+          })
+      )
+    );
+  } catch { return null; }
+}
+async function fetchAllPrices() {
+  return Promise.all(STOCKS.map(s => fetchPrice(s.code)));
+}
+
+// ── Calc helpers ──────────────────────────────
+function evalAmt(i) {
+  const s = STOCKS[i];
+  return prices[i] !== null ? prices[i] * s.qty : s.cost * s.qty;
+}
+function totalEval() { return STOCKS.reduce((sum, _, i) => sum + evalAmt(i), 0); }
+function totalCost() { return STOCKS.reduce((sum, s) => sum + s.cost * s.qty, 0); }
+function totalPL() {
+  return STOCKS.reduce((sum, s, i) => {
+    return prices[i] !== null ? sum + (prices[i] - s.cost) * s.qty : sum;
+  }, 0);
+}
+function getCash() { return Number(document.getElementById('cash-input').value) || 0; }
+function fmt(v) { return '¥' + Math.round(v).toLocaleString('ja-JP'); }
+function fmtPct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
+
+// ── Comment ───────────────────────────────────
+function renderComment() {
+  const pl = totalPL();
+  const hasPrice = prices.some(p => p !== null);
+  const cat = !hasPrice ? 'flat' : pl >= 20000 ? 'good' : pl >= -10000 ? 'flat' : 'bad';
+  const msgs = MESSAGES[cat];
+  const msg = msgs[Math.floor(Math.random() * msgs.length)];
+
+  let mvpName = '', mvpRate = -Infinity;
+  STOCKS.forEach((s, i) => {
+    if (prices[i] !== null) {
+      const rate = (prices[i] - s.cost) / s.cost;
+      if (rate > mvpRate) { mvpRate = rate; mvpName = s.name; }
+    }
+  });
+  const emoji = { '森永製菓':'🍫', '日本管財HD':'🎁', 'Jオイルミルズ':'🍳' };
+  const mvp = mvpName ? `\n（今日のMVP：${mvpName}${emoji[mvpName] || ''}）` : '';
+  document.getElementById('comment-text').textContent = msg + mvp;
+}
+
+// ── Stats ─────────────────────────────────────
+function renderStats() {
+  const ev = totalEval();
+  const pl = totalPL();
+  const cost = totalCost();
+  const cash = getCash();
+  const plPct = cost > 0 ? pl / cost * 100 : 0;
+
+  document.getElementById('stat-eval').textContent = fmt(ev);
+
+  const plEl = document.getElementById('stat-pl');
+  plEl.textContent = fmt(pl);
+  plEl.style.color = pl >= 0 ? '#16a34a' : '#dc2626';
+
+  const plPctEl = document.getElementById('stat-pl-pct');
+  plPctEl.textContent = fmtPct(plPct);
+  plPctEl.style.color = pl >= 0 ? '#16a34a' : '#dc2626';
+
+  document.getElementById('stat-total').textContent = fmt(ev + cash);
+}
+
+// ── Holdings table ────────────────────────────
+function renderTable() {
+  const cash = getCash();
+  const rows = STOCKS.map((s, i) => {
+    const p = prices[i];
+    const ev = p !== null ? p * s.qty : null;
+    const pl = p !== null ? (p - s.cost) * s.qty : null;
+    const plPct = p !== null ? (p - s.cost) / s.cost * 100 : null;
+    const cls = pl !== null ? (pl >= 0 ? 'green' : 'red') : '';
+    return `<tr>
+      <td><b>${s.name}</b><br><span style="font-size:0.68rem;color:#9ca3af">${s.code}</span></td>
+      <td>${fmt(s.cost)}</td>
+      <td style="font-size:0.75rem">${p !== null ? fmt(p) : '<span style="color:#9ca3af">取得できませんでした</span>'}</td>
+      <td>${s.qty}</td>
+      <td>${ev !== null ? fmt(ev) : '---'}</td>
+      <td class="${cls}">${pl !== null ? fmt(pl) + '<br>' + fmtPct(plPct) : '---'}</td>
+    </tr>`;
+  }).join('');
+
+  const totEv = totalEval();
+  const totPl = totalPL();
+  const totCost = totalCost();
+  const totPct = totCost > 0 ? totPl / totCost * 100 : 0;
+
+  document.getElementById('holdings-body').innerHTML = rows + `
+    <tr class="cash-row">
+      <td>現金</td><td></td><td></td><td></td><td>${fmt(cash)}</td><td></td>
+    </tr>
+    <tr class="total-row">
+      <td>合計</td><td></td><td></td><td></td>
+      <td>${fmt(totEv + cash)}</td>
+      <td class="${totPl >= 0 ? 'green' : 'red'}">${fmt(totPl)}<br>${fmtPct(totPct)}</td>
+    </tr>`;
+}
+
+// ── Dividend ──────────────────────────────────
+function renderDividend() {
+  [3, 9].forEach(m => {
+    const list = STOCKS.filter(s => s.divMonths.includes(m));
+    const total = list.reduce((sum, s) => sum + s.divPerShare * s.qty, 0);
+    document.getElementById('div-' + m).innerHTML =
+      `<div class="div-month-header"><span>${m}月 受取配当</span><span class="div-total">${fmt(total)}</span></div>` +
+      list.map(s => `<div class="div-item"><span>${s.name}</span><span>${fmt(s.divPerShare * s.qty)}（${s.qty}株 × ¥${s.divPerShare}）</span></div>`).join('');
+  });
+}
+
+// ── Last update ───────────────────────────────
+function renderLastUpdate() {
+  const s = localStorage.getItem('parent_last_update');
+  if (s) document.getElementById('last-update').textContent = '最終更新：' + s;
+}
+function saveLastUpdate() {
+  const d = new Date();
+  const w = ['日','月','火','水','木','金','土'][d.getDay()];
+  const s = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${w}）`;
+  localStorage.setItem('parent_last_update', s);
+  document.getElementById('last-update').textContent = '最終更新：' + s;
+}
+
+// ── Pie chart ─────────────────────────────────
+function drawPie() {
+  const canvas = document.getElementById('pie-canvas');
+  const W = canvas.parentElement.clientWidth || 260;
+  canvas.width = W; canvas.height = 170;
+  const H = 170;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const data = STOCKS.map((s, i) => ({ name: s.name, color: s.color, value: evalAmt(i) }));
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const cx = W * 0.36, cy = H / 2, r = Math.min(cx * 0.9, (H / 2) * 0.85);
+
+  let angle = -Math.PI / 2;
+  data.forEach(d => {
+    const slice = d.value / total * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, angle, angle + slice);
+    ctx.fillStyle = d.color; ctx.fill();
+    angle += slice;
+  });
+
+  const lx = W * 0.66;
+  const startY = H / 2 - data.length * 13;
+  data.forEach((d, i) => {
+    const pct = (d.value / total * 100).toFixed(1);
+    ctx.beginPath(); ctx.arc(lx + 6, startY + i * 28 + 6, 6, 0, Math.PI * 2);
+    ctx.fillStyle = d.color; ctx.fill();
+    ctx.fillStyle = '#374151'; ctx.font = '11px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(d.name, lx + 16, startY + i * 28 + 5);
+    ctx.fillStyle = '#6b7280'; ctx.font = '10px system-ui';
+    ctx.fillText(pct + '%', lx + 16, startY + i * 28 + 18);
+  });
+}
+
+// ── Line chart ────────────────────────────────
+function drawLine() {
+  const canvas = document.getElementById('line-canvas');
+  const W = canvas.parentElement.clientWidth || 260;
+  canvas.width = W; canvas.height = 170;
+  const H = 170;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  if (!history.length) return;
+
+  const pad = { t: 14, r: 10, b: 28, l: 52 };
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  const vals = history.map(h => h.val);
+  const minV = Math.min(...vals, 990000) * 0.997;
+  const maxV = Math.max(...vals, 1000000) * 1.003;
+  const n = history.length;
+  const px = i => pad.l + (n > 1 ? i / (n - 1) * cw : cw / 2);
+  const py = v => pad.t + ch - (v - minV) / (maxV - minV) * ch;
+
+  // Baseline 100万円
+  ctx.strokeStyle = '#d1d5db'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, py(1000000)); ctx.lineTo(pad.l + cw, py(1000000));
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Y labels
+  ctx.fillStyle = '#9ca3af'; ctx.font = '9px system-ui'; ctx.textAlign = 'right';
+  for (let i = 0; i <= 3; i++) {
+    const v = minV + (maxV - minV) * i / 3;
+    const label = (v / 10000).toFixed(0) + '万';
+    ctx.fillText(label, pad.l - 4, py(v) + 3);
+  }
+
+  // Line
+  ctx.strokeStyle = '#c4b5fd'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  history.forEach((h, i) => { i === 0 ? ctx.moveTo(px(i), py(h.val)) : ctx.lineTo(px(i), py(h.val)); });
+  ctx.stroke();
+
+  // Points
+  history.forEach((h, i) => {
+    ctx.beginPath(); ctx.arc(px(i), py(h.val), 4, 0, Math.PI * 2);
+    ctx.fillStyle = h.fixed ? '#9ca3af' : '#a78bfa'; ctx.fill();
+  });
+
+  // X labels
+  ctx.fillStyle = '#9ca3af'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+  const step = n > 8 ? 2 : 1;
+  history.forEach((h, i) => { if (i % step === 0) ctx.fillText(h.date, px(i), H - 5); });
+}
+
+// ── Full render ───────────────────────────────
+function render() {
+  renderComment();
+  renderStats();
+  renderTable();
+  renderDividend();
+  renderLastUpdate();
+  drawPie();
+  drawLine();
+}
+
+// ── Cash change ───────────────────────────────
+window.onCashChange = () => {
+  saveCash(getCash());
+  renderStats();
+  renderTable();
+};
+
+// ── Update button ─────────────────────────────
+window.onUpdate = async () => {
+  const btn = document.getElementById('update-btn');
+  btn.disabled = true; btn.textContent = '⏳ 取得中...';
+
+  prices = await fetchAllPrices();
+
+  const now = new Date();
+  const dateKey = `${String(now.getFullYear()).slice(2)}/${now.getMonth() + 1}`;
+  const total = totalEval() + getCash();
+  const idx = history.findIndex(h => h.date === dateKey && !h.fixed);
+  if (idx >= 0) history[idx] = { date: dateKey, val: total, fixed: false };
+  else history.push({ date: dateKey, val: total, fixed: false });
+  saveHistory(history);
+  saveLastUpdate();
+
+  render();
+
+  btn.disabled = false; btn.textContent = '🔄 更新する';
+};
+
+// ── Init ──────────────────────────────────────
+document.getElementById('cash-input').value = loadCash();
+render();
+
+// Auto-fetch prices silently on load
+(async () => {
+  prices = await fetchAllPrices();
+  renderComment();
+  renderStats();
+  renderTable();
+  drawPie();
+  drawLine();
+})();
+</script>
+</body>
+</html>
